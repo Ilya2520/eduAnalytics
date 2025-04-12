@@ -3,3 +3,13 @@ controllers:
         path: ../src/Controller/
         namespace: App\Controller
     type: attribute
+
+app.swagger_ui:
+    path: /api/doc
+    controller: nelmio_api_doc.controller.swagger_ui
+    defaults: { area: 'default' }
+
+app.swagger:
+    path: /api/doc.json
+    controller: nelmio_api_doc.controller.swagger
+    defaults: { area: 'default' }

@@ -5,6 +5,6 @@ monolog:
       path: "%kernel.logs_dir%/%kernel.environment%.log"
       level: debug
 
-    elklogger:
-        type: service
-        id: Symfony\Bridge\Monolog\Handler\ElasticsearchLogstashHandler  
+    # elklogger:
+    #     type: service
+    #     id: Symfony\Bridge\Monolog\Handler\ElasticsearchLogstashHandler  

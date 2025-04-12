@@ -19,12 +19,12 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
-    Symfony\Bridge\Monolog\Handler\ElasticsearchLogstashHandler:
-        arguments:
-            $endpoint: '%env(ELASTICSEARCH_HOST)%'
-            $index: "symfony-logs"
-            $client: null
-            $bubble: true
+    # Symfony\Bridge\Monolog\Handler\ElasticsearchLogstashHandler:
+    #     arguments:
+    #         $endpoint: '%env(ELASTICSEARCH_HOST)%'
+    #         $index: "symfony-logs"
+    #         $client: null
+    #         $bubble: true
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
