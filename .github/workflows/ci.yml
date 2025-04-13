@@ -2,6 +2,18 @@ name: CI Pipeline
 
 on: [push, pull_request]
 
+env:
+  PHP_VERSION: 8.2
+  POSTGRES_VERSION: 15
+  KERNEL_CLASS: 'App\Kernel'
+  APP_SECRET: '$ecretf0rt3st'
+  SYMFONY_DEPRECATIONS_HELPER: 999999
+  POSTGRES_DB: test_symfony
+  POSTGRES_USER: test_symfony
+  POSTGRES_PASSWORD: test_password
+  POSTGRES_PORT: 5432
+  DATABASE_URL: "postgresql://test_symfony:test_password@127.0.0.1:5432/test_symfony?serverVersion=15"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -10,26 +22,42 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.2
-      - name: Install Composer dependencies
+          php-version: ${{ env.PHP_VERSION }}
+      - name: Cache Composer
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('composer.lock') }}
+      - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
-      - name: Build finished
-        run: echo "Build dependencies installed"
 
   test_unit:
     runs-on: ubuntu-latest
     needs: build
+    services:
+      db:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        options: --health-cmd "pg_isready -U test_symfony -d test_symfony" --health-interval 2s --health-timeout 5s --health-retries 5
     steps:
       - uses: actions/checkout@v3
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.2
-      - name: Install Composer dependencies
+          php-version: ${{ env.PHP_VERSION }}
+      - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
-      - name: Grant execute permission to bin/console
-        run: chmod +x bin/console
-      - name: Run PHPUnit tests
+      - name: Prepare database
+        run: |
+          php bin/console doctrine:database:drop --force --env=test --if-exists
+          php bin/console doctrine:database:create --env=test
+          php bin/console doctrine:migrations:migrate --no-interaction --env=test
+      - name: Run tests
         run: composer run test
 
   code_style:
@@ -40,8 +68,8 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.2
-      - name: Install Composer dependencies
+          php-version: ${{ env.PHP_VERSION }}
+      - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
-      - name: Check code style with PHP-CS-Fixer
+      - name: Check code style
         run: composer run cs-check

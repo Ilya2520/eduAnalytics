@@ -8,5 +8,5 @@ monolog:
     elklogger:
        type: service
        id: Symfony\Bridge\Monolog\Handler\ElasticsearchLogstashHandler
-       channels: ["!event"]
+       channels: ["!event", "!doctrine", "!console"]
        lazy: true
