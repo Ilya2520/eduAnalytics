@@ -27,6 +27,8 @@ jobs:
           php-version: 8.2
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
+      - name: Grant execute permission to bin/console
+        run: chmod +x bin/console
       - name: Run PHPUnit tests
         run: composer run test
 
