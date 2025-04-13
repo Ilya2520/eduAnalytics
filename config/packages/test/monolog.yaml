@@ -1,0 +1,7 @@
+monolog:
+  handlers:
+    main:
+      type: 'null'
+      path: '/dev/null'
+    elklogger:
+      type: 'null'
