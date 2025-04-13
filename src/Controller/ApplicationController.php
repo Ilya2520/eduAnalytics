@@ -17,6 +17,7 @@ use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
 
 #[OA\Tag(name: 'Applications')]
@@ -35,6 +36,7 @@ class ApplicationController extends AbstractApiController
 
     #[OA\Post(
         summary: 'Create new application',
+        security: [['Bearer' => []]],
         requestBody: new OA\RequestBody(
             description: 'Application data',
             content: new OA\JsonContent(ref: new Model(type: CreateApplicationInputDTO::class))
@@ -45,6 +47,7 @@ class ApplicationController extends AbstractApiController
         description: 'Application created',
         content: new OA\JsonContent(ref: new Model(type: ApplicationOutputDTO::class))
     )]
+    #[IsGranted('ROLE_ADMIN')]
     #[Route('', name: 'applications_create', methods: ['POST'])]
     public function create(Request $request): Response
     {
@@ -81,6 +84,7 @@ class ApplicationController extends AbstractApiController
 
     #[OA\Get(
         summary: 'Get application by ID',
+        security: [['Bearer' => []]],
         parameters: [
             new OA\Parameter(
                 name: 'id',
@@ -100,6 +104,7 @@ class ApplicationController extends AbstractApiController
         response: 404,
         description: 'Application not found'
     )]
+    #[IsGranted('ROLE_ADMIN')]
     #[Route('/{id}', name: 'applications_get', methods: ['GET'])]
     public function get(int $id): Response
     {
@@ -114,6 +119,7 @@ class ApplicationController extends AbstractApiController
 
     #[OA\Get(
         summary: 'Get applications list with filtering',
+        security: [['Bearer' => []]],
         parameters: [
             new OA\Parameter(
                 name: 'page',
@@ -175,6 +181,7 @@ class ApplicationController extends AbstractApiController
         description: 'List of applications',
         content: new OA\JsonContent(ref: new Model(type: ApplicationListOutputDTO::class))
     )]
+    #[IsGranted('ROLE_ADMIN')]
     #[Route('', name: 'applications_list', methods: ['GET'])]
     public function list(Request $request): Response
     {

@@ -9,6 +9,7 @@ services:
     depends_on:
       - db
       - rabbitmq
+      - elasticsearch
     networks:
       - app_network
 

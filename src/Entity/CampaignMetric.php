@@ -38,5 +38,83 @@ class CampaignMetric
     #[ORM\Column(type: 'float')]
     private float $conversionRate;
 
-    // Getters and setters...
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function setId(?int $id): void
+    {
+        $this->id = $id;
+    }
+
+    public function getCampaign(): MarketingCampaign
+    {
+        return $this->campaign;
+    }
+
+    public function setCampaign(MarketingCampaign $campaign): void
+    {
+        $this->campaign = $campaign;
+    }
+
+    public function getRecordDate(): \DateTimeInterface
+    {
+        return $this->recordDate;
+    }
+
+    public function setRecordDate(\DateTimeInterface $recordDate): void
+    {
+        $this->recordDate = $recordDate;
+    }
+
+    public function getImpressions(): int
+    {
+        return $this->impressions;
+    }
+
+    public function setImpressions(int $impressions): void
+    {
+        $this->impressions = $impressions;
+    }
+
+    public function getClicks(): int
+    {
+        return $this->clicks;
+    }
+
+    public function setClicks(int $clicks): void
+    {
+        $this->clicks = $clicks;
+    }
+
+    public function getApplicationsGenerated(): int
+    {
+        return $this->applicationsGenerated;
+    }
+
+    public function setApplicationsGenerated(int $applicationsGenerated): void
+    {
+        $this->applicationsGenerated = $applicationsGenerated;
+    }
+
+    public function getCostPerApplication(): float
+    {
+        return $this->costPerApplication;
+    }
+
+    public function setCostPerApplication(float $costPerApplication): void
+    {
+        $this->costPerApplication = $costPerApplication;
+    }
+
+    public function getConversionRate(): float
+    {
+        return $this->conversionRate;
+    }
+
+    public function setConversionRate(float $conversionRate): void
+    {
+        $this->conversionRate = $conversionRate;
+    }
 }

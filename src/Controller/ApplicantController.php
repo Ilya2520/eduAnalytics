@@ -17,6 +17,7 @@ use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
 
 #[OA\Tag(name: 'Applicants')]
@@ -35,6 +36,7 @@ class ApplicantController extends AbstractApiController
 
     #[OA\Post(
         summary: 'Create new applicant',
+        security: [['Bearer' => []]],
         requestBody: new OA\RequestBody(
             description: 'Applicant data',
             content: new OA\JsonContent(ref: new Model(type: CreateApplicantInputDTO::class))
@@ -45,6 +47,7 @@ class ApplicantController extends AbstractApiController
         description: 'Applicant created',
         content: new OA\JsonContent(ref: new Model(type: ApplicantOutputDTO::class))
     )]
+    #[IsGranted('ROLE_ADMIN')]
     #[Route('', name: 'applicant_create', methods: ['POST'])]
     public function create(Request $request): Response
     {
@@ -80,6 +83,7 @@ class ApplicantController extends AbstractApiController
 
     #[OA\Get(
         summary: 'Get applicants list with filtering',
+        security: [['Bearer' => []]],
         parameters: [
             new OA\Parameter(
                 name: 'page',
@@ -126,6 +130,7 @@ class ApplicantController extends AbstractApiController
         description: 'List of applicants',
         content: new OA\JsonContent(ref: new Model(type: ApplicantListOutputDTO::class))
     )]
+    #[IsGranted('ROLE_ADMIN')]
     #[Route('', name: 'applicants_list', methods: ['GET'])]
     public function list(Request $request): Response
     {
