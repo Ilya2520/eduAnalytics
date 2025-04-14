@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\DTO\Output\ReportOutputDTO;
 use App\Entity\Report;
 use App\Service\ReportService;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -107,7 +108,7 @@ class ReportController extends AbstractController
             return $this->json(['error' => 'Report not found'], 404);
         }
 
-        return $this->json($report);
+        return $this->json(ReportOutputDTO::createFromEntity($report));
     }
 
     #[OA\Post(

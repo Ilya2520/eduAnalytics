@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\DTO\Output\MarketingCampaignOutputDTO;
 use App\Entity\MarketingCampaign;
 use App\Service\MarketingCampaignService;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -106,7 +107,7 @@ class MarketingCampaignController extends AbstractController
             return $this->json(['error' => 'Marketing campaign not found'], 404);
         }
 
-        return $this->json($campaign);
+        return $this->json(MarketingCampaignOutputDTO::createFromEntity($campaign));
     }
 
     #[OA\Post(

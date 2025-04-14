@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\DTO\Output\ProgramOutput;
 use App\Entity\Program;
 use App\Service\ProgramService;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -58,7 +59,7 @@ class ProgramController extends AbstractController
         description: 'List of programs',
         content: new OA\JsonContent(
             type: 'array',
-            items: new OA\Items(ref: new Model(type: Program::class))
+            items: new OA\Items(ref: new Model(type: ProgramOutput::class))
         )
     )]
     #[IsGranted('ROLE_USER')]
@@ -68,11 +69,25 @@ class ProgramController extends AbstractController
         $page = $request->query->getInt('page', 1);
         $limit = $request->query->getInt('limit', 10);
         $isActive = $request->query->get('isActive');
+        if ($isActive !== null) {
+            $isActive = filter_var($isActive, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        }
         $degree = $request->query->get('degree');
 
-        $programs = $this->programService->getProgramsList($page, $limit, $isActive, $degree);
+        $result = $this->programService->getProgramsList($page, $limit, $isActive, $degree);
 
-        return $this->json($programs);
+        $items = array_map(
+            fn (Program $program) => ProgramOutput::fromEntity($program),
+            iterator_to_array($result['items'])
+        );
+
+        return $this->json([
+            'items' => $items,
+            'total' => $result['total'],
+            'page' => $result['page'],
+            'limit' => $result['limit'],
+            'pages' => ceil($result['total'] / $result['limit'])
+        ]);
     }
 
     #[OA\Get(
@@ -90,7 +105,7 @@ class ProgramController extends AbstractController
     #[OA\Response(
         response: 200,
         description: 'Program details',
-        content: new OA\JsonContent(ref: new Model(type: Program::class))
+        content: new OA\JsonContent(ref: new Model(type: ProgramOutput::class))
     )]
     #[OA\Response(
         response: 404,
@@ -106,6 +121,6 @@ class ProgramController extends AbstractController
             return $this->json(['error' => 'Program not found'], 404);
         }
 
-        return $this->json($program);
+        return $this->json(ProgramOutput::fromEntity($program));
     }
 }
