@@ -6,8 +6,8 @@ namespace App\Controller;
 
 use App\DTO\Input\MarketingCampaignCreateDTO;
 use App\DTO\Input\MarketingCampaignUpdateDTO;
-use App\DTO\Output\PaginatedResponseDTO;
 use App\DTO\Output\MarketingCampaignOutputDTO;
+use App\DTO\Output\PaginatedResponseDTO;
 use App\Service\CacheService;
 use App\Service\MarketingCampaignService;
 use Doctrine\ORM\EntityNotFoundException;
