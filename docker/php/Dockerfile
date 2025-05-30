@@ -1,12 +1,24 @@
 FROM php:8.2-fpm
 
-# Установка зависимостей
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libpq-dev \
     libzip-dev \
-    && docker-php-ext-install pdo pdo_pgsql zip
+    librabbitmq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN docker-php-ext-install \
+    pdo \
+    pdo_pgsql \
+    zip \
+    sockets \
+    && pecl install \
+    amqp \
+    redis \
+    && docker-php-ext-enable \
+    amqp \
+    redis
 
 # Установка Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

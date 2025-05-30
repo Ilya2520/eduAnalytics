@@ -10,6 +10,7 @@ use App\DTO\Output\Applicant\ApplicantOutputDTO;
 use App\Factory\Applicant\ApplicantInputDTOFactory;
 use App\Factory\Applicant\ListApplicantsQueryDTOFactory;
 use App\Service\ApplicantService;
+use App\Service\CacheService;
 use App\Validator\ApplicantValidator;
 use App\Validator\DTOValidator;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -24,12 +25,14 @@ use Symfony\Component\Serializer\SerializerInterface;
 #[Route('/api/applicants')]
 class ApplicantController extends AbstractApiController
 {
+    private const TAG = 'Applicants';
     public function __construct(
         private readonly ApplicantService $applicantService,
         private readonly ApplicantInputDTOFactory $inputDTOFactory,
         private readonly ApplicantValidator $applicantValidator,
         private readonly DTOValidator $dtoValidator,
-        SerializerInterface $serializer
+        SerializerInterface $serializer,
+        private readonly CacheService $cacheService,
     ) {
         parent::__construct($serializer);
     }
@@ -63,6 +66,8 @@ class ApplicantController extends AbstractApiController
             if (!$appValidation['success']) {
                 return $this->respondWithError($appValidation['errors'], Response::HTTP_BAD_REQUEST);
             }
+
+            $this->cacheService->invalidateByTags([self::TAG]);
 
             $outputDTO = $this->applicantService->createApplicant(
                 $inputDTO->firstName,
@@ -142,12 +147,22 @@ class ApplicantController extends AbstractApiController
                 return $this->respondWithError($validation['errors'], Response::HTTP_BAD_REQUEST);
             }
 
-            $result = $this->applicantService->listApplicants(
-                $query->page,
-                $query->limit,
-                $query->search,
-                $query->sortBy,
-                $query->sortDirection
+            $cacheKey = $this->cacheService->generateCacheKey(
+                className: get_class($this),
+                prefix: __FUNCTION__,
+                params: get_object_vars($query)
+            );
+
+            $result = $this->cacheService->fetchFromCache(
+                key: $cacheKey,
+                tag: self::TAG,
+                callback: fn () => $this->applicantService->listApplicants(
+                    $query->page,
+                    $query->limit,
+                    $query->search,
+                    $query->sortBy,
+                    $query->sortDirection
+                ),
             );
 
             return $this->respond($result);

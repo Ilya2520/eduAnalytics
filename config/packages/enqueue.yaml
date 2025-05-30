@@ -1,0 +1,10 @@
+enqueue:
+  default:
+    transport:
+      dsn: '%env(ENQUEUE_DSN)%'
+      pre_fetch_count: 1
+    client:
+      traceable_producer: true
+      router_topic: 'report.generate'
+      router_queue: 'report_queue'
+

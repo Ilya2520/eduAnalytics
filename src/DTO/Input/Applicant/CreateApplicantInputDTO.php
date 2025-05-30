@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-// src/DTO/Applicant/Input/CreateApplicantInputDTO.php
-
 namespace App\DTO\Input\Applicant;
 
 use OpenApi\Attributes as OA;

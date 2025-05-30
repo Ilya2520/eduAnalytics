@@ -10,6 +10,7 @@ use App\DTO\Output\Application\ApplicationOutputDTO;
 use App\Factory\Application\ApplicationInputDTOFactory;
 use App\Factory\Application\ListApplicationsQueryDTOFactory;
 use App\Service\ApplicationService;
+use App\Service\CacheService;
 use App\Validator\ApplicationValidator;
 use App\Validator\DTOValidator;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -24,11 +25,13 @@ use Symfony\Component\Serializer\SerializerInterface;
 #[Route('/api/applications')]
 class ApplicationController extends AbstractApiController
 {
+    private const TAG = 'Applications';
     public function __construct(
         private readonly ApplicationService $applicationService,
         private readonly ApplicationInputDTOFactory $inputDTOFactory,
         private readonly ApplicationValidator $appValidator,
         private readonly DTOValidator $dtoValidator,
+        private readonly CacheService $cacheService,
         SerializerInterface $serializer
     ) {
         parent::__construct($serializer);
@@ -72,6 +75,7 @@ class ApplicationController extends AbstractApiController
                 $inputDTO->documents,
                 $inputDTO->notes
             );
+            $this->cacheService->invalidateByTags([self::TAG]);
 
             return $this->respond($outputDTO, Response::HTTP_CREATED);
         } catch (\Exception $e) {
@@ -109,7 +113,17 @@ class ApplicationController extends AbstractApiController
     public function get(int $id): Response
     {
         try {
-            $application = $this->applicationService->getApplicationById($id);
+            $cacheKey = $this->cacheService->generateCacheKey(
+                className: get_class($this),
+                prefix: __FUNCTION__,
+                params: ['id' => $id],
+            );
+
+            $application = $this->cacheService->fetchFromCache(
+                key: $cacheKey,
+                tag: self::TAG,
+                callback: fn () => $this->applicationService->getApplicationById($id)
+            );
 
             return $this->respond($application);
         } catch (\InvalidArgumentException $e) {
@@ -193,7 +207,17 @@ class ApplicationController extends AbstractApiController
                 return $this->respondWithError($validation['errors'], Response::HTTP_BAD_REQUEST);
             }
 
-            $result = $this->applicationService->listApplications($listQuery);
+            $cacheKey = $this->cacheService->generateCacheKey(
+                className: get_class($this),
+                prefix: __FUNCTION__,
+                params: get_object_vars($listQuery)
+            );
+
+            $result = $this->cacheService->fetchFromCache(
+                key: $cacheKey,
+                tag: self::TAG,
+                callback: fn () => $this->applicationService->listApplications($listQuery),
+            );
 
             return $this->respond($result);
         } catch (\Exception $e) {

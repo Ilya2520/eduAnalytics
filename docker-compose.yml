@@ -6,6 +6,7 @@ services:
     container_name: app_php
     volumes:
       - .:/var/www
+      - reports_storage:/var/www/reports
     depends_on:
       - db
       - rabbitmq
@@ -21,6 +22,7 @@ services:
     volumes:
       - .:/var/www
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - reports_storage:/var/www/reports
     depends_on:
       - php
     networks:
@@ -51,10 +53,16 @@ services:
       - "${RABBITMQ_MANAGEMENT_PORT}:15672"
     networks:
       - app_network
+      - shared_backend_network
 
   redis:
     image: redis:latest
     container_name: app_redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data # Персистентное хранилище
+    command: redis-server --appendonly yes # Включаем персистентность
     networks:
       - app_network
 
@@ -112,7 +120,12 @@ services:
 networks:
   app_network:
     driver: bridge
+  shared_backend_network:
+    external: true
 
 volumes:
   postgres_data:
+  redis_data:
   elasticsearch_data:
+  reports_storage:
+    external: true

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Enum\ReportStatusEnum;
 use App\Repository\ReportRepository;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -44,7 +45,7 @@ class Report
     public function __construct()
     {
         $this->createdAt = new \DateTime();
-        $this->status = 'pending';
+        $this->status = ReportStatusEnum::pending->value;
     }
 
     public function getId(): ?int
