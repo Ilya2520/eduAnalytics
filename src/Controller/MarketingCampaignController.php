@@ -19,16 +19,21 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Annotation\Route;
+use App\Presentation\Http\ApiResponseTrait;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[OA\Tag(name: 'Marketing Campaigns', description: 'Manage marketing campaigns and their details.')]
 #[Route('/api/marketing-campaigns')]
 class MarketingCampaignController extends AbstractController
 {
+    use ApiResponseTrait;
     private const TAG = 'Marketing-campaigns';
     public function __construct(
         private readonly MarketingCampaignService $marketingCampaignService,
         private readonly CacheService $cacheService,
+        private readonly int $defaultLimit,
+        private readonly int $maxLimit,
+        private readonly \App\Service\CacheKeyBuilder $cacheKeyBuilder,
     ) {
     }
 
@@ -59,24 +64,25 @@ class MarketingCampaignController extends AbstractController
     #[Route('', name: 'marketing_campaigns_list', methods: ['GET'])]
     public function list(
         #[MapQueryParameter] int $page = 1,
-        #[MapQueryParameter] int $limit = 10,
+        #[MapQueryParameter] ?int $limit = null,
         #[MapQueryParameter] ?string $status = null,
         #[MapQueryParameter] ?string $channel = null
     ): JsonResponse {
         if ($page < 1) {
             $page = 1;
         }
+        $limit = $limit ?? $this->defaultLimit;
         if ($limit < 1) {
             $limit = 1;
         }
-        if ($limit > 100) {
-            $limit = 100;
-        } // Max limit example
+        if ($limit > $this->maxLimit) {
+            $limit = $this->maxLimit;
+        }
 
         try {
-            $cacheKey = $this->cacheService->generateCacheKey(
+            $cacheKey = $this->cacheKeyBuilder->build(
                 className: get_class($this),
-                prefix: __FUNCTION__,
+                methodName: __FUNCTION__,
                 params: [
                     'page' => $page,
                     'limit' => $limit,
@@ -91,9 +97,9 @@ class MarketingCampaignController extends AbstractController
                 callback: fn () => $this->marketingCampaignService->getMarketingCampaignsList($page, $limit, $status, $channel)
             );
 
-            return $this->json($campaignsData);
+            return $this->ok($campaignsData);
         } catch (\RuntimeException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->error($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 

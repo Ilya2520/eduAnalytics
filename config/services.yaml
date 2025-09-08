@@ -1,4 +1,9 @@
 parameters:
+    cache.default_ttl: '%env(default:3600:int:CACHE_DEFAULT_TTL)%'
+    pagination.default_limit: '%env(default:10:int:PAGINATION_DEFAULT_LIMIT)%'
+    pagination.max_limit: '%env(default:100:int:PAGINATION_MAX_LIMIT)%'
+    report.generation_topic: '%env(default:report.generate:REPORT_GENERATION_TOPIC)%'
+    report.webhook_route: '%env(default:webhook_report_completed:REPORT_WEBHOOK_ROUTE)%'
 
 services:
     _defaults:
@@ -20,6 +25,55 @@ services:
     # Дополнительные алиасы
     app.long_term_cache:
         alias: app.long_term
+
+    App\Service\CacheService:
+        arguments:
+            $defaultTtl: '%cache.default_ttl%'
+
+    App\Service\CacheKeyBuilder: ~
+
+    App\Service\ReportService:
+        arguments:
+            $reportGenerationTopic: '%report.generation_topic%'
+            $reportWebhookRoute: '%report.webhook_route%'
+
+    App\EventSubscriber\ReportEventSubscriber:
+        arguments:
+            $reportGenerationTopic: '%report.generation_topic%'
+            $reportWebhookRoute: '%report.webhook_route%'
+
+    App\Controller\MarketingCampaignController:
+        arguments:
+            $defaultLimit: '%pagination.default_limit%'
+            $maxLimit: '%pagination.max_limit%'
+
+    App\Controller\ReportController:
+        arguments:
+            $listReportsQueryDTOFactory: '@App\\Factory\\Report\\ListReportsQueryDTOFactory'
+
+    App\Factory\Applicant\ListApplicantsQueryDTOFactory:
+        arguments:
+            $defaultLimit: '%pagination.default_limit%'
+            $maxLimit: '%pagination.max_limit%'
+
+    App\Factory\Application\ListApplicationsQueryDTOFactory:
+        arguments:
+            $defaultLimit: '%pagination.default_limit%'
+            $maxLimit: '%pagination.max_limit%'
+
+    App\Factory\Program\ListProgramsQueryDTOFactory:
+        arguments:
+            $defaultLimit: '%pagination.default_limit%'
+            $maxLimit: '%pagination.max_limit%'
+
+    App\Factory\Report\ListReportsQueryDTOFactory:
+        arguments:
+            $defaultLimit: '%pagination.default_limit%'
+            $maxLimit: '%pagination.max_limit%'
+
+    App\Builder\Report\ReportParametersBuilder: ~
+
+    # Auth services автоконфигурируются через App\ пространство
 
     # Elasticsearch handler
     Symfony\Bridge\Monolog\Handler\ElasticsearchLogstashHandler:

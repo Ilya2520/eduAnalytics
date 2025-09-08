@@ -13,15 +13,17 @@ class CacheService
 {
     public function __construct(
         private readonly TagAwareCacheInterface $cache,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly int $defaultTtl
     ) {
     }
 
     /**
      * Получает данные из кэша по ключу или вызывает колбэк для их получения.
      */
-    public function get(string $key, callable $callback, array $tags = [], int $ttl = 3600): mixed
+    public function get(string $key, callable $callback, array $tags = [], int $ttl = null): mixed
     {
+        $ttl = $ttl ?? $this->defaultTtl;
         try {
             return $this->cache->get($key, function (ItemInterface $item) use ($callback, $tags, $ttl) {
                 // Устанавливаем теги

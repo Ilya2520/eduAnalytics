@@ -20,11 +20,13 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
+use App\Presentation\Http\ApiResponseTrait;
 
 #[OA\Tag(name: 'Applications')]
 #[Route('/api/applications')]
 class ApplicationController extends AbstractApiController
 {
+    use ApiResponseTrait;
     private const TAG = 'Applications';
     public function __construct(
         private readonly ApplicationService $applicationService,
@@ -32,6 +34,8 @@ class ApplicationController extends AbstractApiController
         private readonly ApplicationValidator $appValidator,
         private readonly DTOValidator $dtoValidator,
         private readonly CacheService $cacheService,
+        private readonly ListApplicationsQueryDTOFactory $listApplicationsQueryDTOFactory,
+        private readonly \App\Service\CacheKeyBuilder $cacheKeyBuilder,
         SerializerInterface $serializer
     ) {
         parent::__construct($serializer);
@@ -113,9 +117,9 @@ class ApplicationController extends AbstractApiController
     public function get(int $id): Response
     {
         try {
-            $cacheKey = $this->cacheService->generateCacheKey(
+            $cacheKey = $this->cacheKeyBuilder->build(
                 className: get_class($this),
-                prefix: __FUNCTION__,
+                methodName: __FUNCTION__,
                 params: ['id' => $id],
             );
 
@@ -125,9 +129,9 @@ class ApplicationController extends AbstractApiController
                 callback: fn () => $this->applicationService->getApplicationById($id)
             );
 
-            return $this->respond($application);
+            return $this->ok($application);
         } catch (\InvalidArgumentException $e) {
-            return $this->respondWithError($e->getMessage(), Response::HTTP_NOT_FOUND);
+            return $this->error($e->getMessage(), Response::HTTP_NOT_FOUND);
         }
     }
 
@@ -200,16 +204,16 @@ class ApplicationController extends AbstractApiController
     public function list(Request $request): Response
     {
         try {
-            $listQuery = (new ListApplicationsQueryDTOFactory())->create($request);
+            $listQuery = $this->listApplicationsQueryDTOFactory->create($request);
 
             $validation = $this->dtoValidator->validate($listQuery);
             if (!$validation['success']) {
                 return $this->respondWithError($validation['errors'], Response::HTTP_BAD_REQUEST);
             }
 
-            $cacheKey = $this->cacheService->generateCacheKey(
+            $cacheKey = $this->cacheKeyBuilder->build(
                 className: get_class($this),
-                prefix: __FUNCTION__,
+                methodName: __FUNCTION__,
                 params: get_object_vars($listQuery)
             );
 
@@ -219,12 +223,9 @@ class ApplicationController extends AbstractApiController
                 callback: fn () => $this->applicationService->listApplications($listQuery),
             );
 
-            return $this->respond($result);
+            return $this->ok($result);
         } catch (\Exception $e) {
-            return $this->respondWithError(
-                'Internal server error: ' . $e->getMessage(),
-                Response::HTTP_INTERNAL_SERVER_ERROR
-            );
+            return $this->error('Internal server error: ' . $e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 }

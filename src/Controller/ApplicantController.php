@@ -20,11 +20,14 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
+use App\Presentation\Http\ApiResponseTrait;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 
 #[OA\Tag(name: 'Applicants')]
 #[Route('/api/applicants')]
 class ApplicantController extends AbstractApiController
 {
+    use ApiResponseTrait;
     private const TAG = 'Applicants';
     public function __construct(
         private readonly ApplicantService $applicantService,
@@ -33,6 +36,8 @@ class ApplicantController extends AbstractApiController
         private readonly DTOValidator $dtoValidator,
         SerializerInterface $serializer,
         private readonly CacheService $cacheService,
+        private readonly ListApplicantsQueryDTOFactory $listApplicantsQueryDTOFactory,
+        private readonly \App\Service\CacheKeyBuilder $cacheKeyBuilder,
     ) {
         parent::__construct($serializer);
     }
@@ -52,10 +57,9 @@ class ApplicantController extends AbstractApiController
     )]
     #[IsGranted('ROLE_ADMIN')]
     #[Route('', name: 'applicant_create', methods: ['POST'])]
-    public function create(Request $request): Response
+    public function create(#[MapRequestPayload] CreateApplicantInputDTO $inputDTO): Response
     {
         try {
-            $inputDTO = $this->inputDTOFactory->createFromRequest($request);
 
             $dtoValidation = $this->dtoValidator->validate($inputDTO);
             if (!$dtoValidation['success']) {
@@ -140,16 +144,16 @@ class ApplicantController extends AbstractApiController
     public function list(Request $request): Response
     {
         try {
-            $query = (new ListApplicantsQueryDTOFactory())->create($request);
+            $query = $this->listApplicantsQueryDTOFactory->create($request);
 
             $validation = $this->dtoValidator->validate($query);
             if (!$validation['success']) {
                 return $this->respondWithError($validation['errors'], Response::HTTP_BAD_REQUEST);
             }
 
-            $cacheKey = $this->cacheService->generateCacheKey(
+            $cacheKey = $this->cacheKeyBuilder->build(
                 className: get_class($this),
-                prefix: __FUNCTION__,
+                methodName: __FUNCTION__,
                 params: get_object_vars($query)
             );
 
@@ -165,12 +169,9 @@ class ApplicantController extends AbstractApiController
                 ),
             );
 
-            return $this->respond($result);
+            return $this->ok($result);
         } catch (\Exception $e) {
-            return $this->respondWithError(
-                'Internal server error: ' . $e->getMessage(),
-                Response::HTTP_INTERNAL_SERVER_ERROR
-            );
+            return $this->error('Internal server error: ' . $e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 }

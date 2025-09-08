@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\DTO\Input\ReportCreateInputDTO;
+use App\DTO\Input\Report\ListReportsQueryDTO;
 use App\DTO\Output\PaginatedResponseDTO;
 use App\DTO\Output\ReportOutputDTO;
+use App\Factory\Report\ListReportsQueryDTOFactory;
 use App\Service\CacheService;
 use App\Service\ReportService;
 use Doctrine\ORM\EntityNotFoundException;
@@ -22,17 +24,21 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Annotation\Route;
+use App\Presentation\Http\ApiResponseTrait;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[OA\Tag(name: 'Reports', description: 'Manage and download generated reports.')]
 #[Route('/api/reports')]
 class ReportController extends AbstractController
 {
+    use ApiResponseTrait;
     private const TAG = 'Reports';
     public function __construct(
         private readonly ReportService $reportService,
         private readonly LoggerInterface $logger,
         private readonly CacheService $cacheService,
+        private readonly ListReportsQueryDTOFactory $listReportsQueryDTOFactory,
+        private readonly \App\Service\CacheKeyBuilder $cacheKeyBuilder,
     ) {
     }
 
@@ -60,43 +66,31 @@ class ReportController extends AbstractController
     #[OA\Response(response: 500, description: 'Internal server error.')]
     #[IsGranted('ROLE_USER')]
     #[Route('', name: 'reports_list', methods: ['GET'])]
-    public function list(
-        #[MapQueryParameter] int $page = 1,
-        #[MapQueryParameter] int $limit = 10,
-        #[MapQueryParameter] ?string $type = null,
-        #[MapQueryParameter] ?string $status = null
-    ): JsonResponse {
-        if ($page < 1) {
-            $page = 1;
-        }
-        if ($limit < 1) {
-            $limit = 1;
-        }
-        if ($limit > 100) {
-            $limit = 100;
-        }
+    public function list(Request $request): JsonResponse
+    {
+        $query = $this->listReportsQueryDTOFactory->create($request);
 
         try {
-            $cacheKey = $this->cacheService->generateCacheKey(
+            $cacheKey = $this->cacheKeyBuilder->build(
                 className: get_class($this),
-                prefix: __FUNCTION__,
+                methodName: __FUNCTION__,
                 params: [
-                    'page' => $page,
-                    'limit' => $limit,
-                    'type' => $type,
-                    'status' => $status,
+                    'page' => $query->page,
+                    'limit' => $query->limit,
+                    'type' => $query->type,
+                    'status' => $query->status,
                 ]
             );
 
             $reportsData = $this->cacheService->fetchFromCache(
                 key: $cacheKey,
                 tag: self::TAG,
-                callback: fn () => $this->reportService->getReportsList($page, $limit, $type, $status),
+                callback: fn () => $this->reportService->getReportsList($query->page, $query->limit, $query->type, $query->status),
             );
 
-            return $this->json($reportsData);
+            return $this->ok($reportsData);
         } catch (\RuntimeException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->error($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -127,11 +121,11 @@ class ReportController extends AbstractController
                 callback: fn () => $this->reportService->getReportById($id),
             );
 
-            return $this->json(ReportOutputDTO::createFromEntity($result));
+            return $this->ok(ReportOutputDTO::createFromEntity($result));
         } catch (EntityNotFoundException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
-        } catch (\RuntimeException $e) { // Catch other potential runtime issues from service
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->error($e->getMessage(), Response::HTTP_NOT_FOUND);
+        } catch (\RuntimeException $e) {
+            return $this->error($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 

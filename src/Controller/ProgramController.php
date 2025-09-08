@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\DTO\Input\Program\ListProgramsQueryDTO;
 use App\DTO\Output\ProgramOutput;
 use App\Entity\Program;
+use App\Factory\Program\ListProgramsQueryDTOFactory;
 use App\Service\CacheService;
 use App\Service\ProgramService;
 use Doctrine\ORM\EntityNotFoundException;
@@ -16,16 +18,20 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use App\Presentation\Http\ApiResponseTrait;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[OA\Tag(name: 'Programs', description: 'Manage academic programs.')]
 #[Route('/api/programs')]
 class ProgramController extends AbstractController
 {
+    use ApiResponseTrait;
     private const TAG = 'Programs';
     public function __construct(
         private readonly ProgramService $programService,
         private readonly CacheService $cacheService,
+        private readonly ListProgramsQueryDTOFactory $listProgramsQueryDTOFactory,
+        private readonly \App\Service\CacheKeyBuilder $cacheKeyBuilder,
     ) {
     }
 
@@ -52,38 +58,31 @@ class ProgramController extends AbstractController
     #[Route('', name: 'programs_list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
-        $page = $request->query->getInt('page', 1);
-        $limit = $request->query->getInt('limit', 10);
-        $isActive = $request->query->get('isActive');
-        if ($isActive !== null) {
-            $isActive = filter_var($isActive, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-        }
-        $degree = $request->query->get('degree');
+        $query = $this->listProgramsQueryDTOFactory->create($request);
 
-        $cacheKey = $this->cacheService->generateCacheKey(
+        $cacheKey = $this->cacheKeyBuilder->build(
             className: get_class($this),
-            prefix: __FUNCTION__,
+            methodName: __FUNCTION__,
             params: [
-                'page' => $page,
-                'limit' => $limit,
-                'isActive' => $isActive,
-                'degree' => $degree,
+                'page' => $query->page,
+                'limit' => $query->limit,
+                'isActive' => $query->isActive,
+                'degree' => $query->degree,
             ],
         );
 
         $result = $this->cacheService->fetchFromCache(
             key: $cacheKey,
             tag: self::TAG,
-            callback: fn () => $this->programService->getProgramsList($page, $limit, $isActive, $degree)
+            callback: fn () => $this->programService->getProgramsList($query->page, $query->limit, $query->isActive, $query->degree)
         );
-        ;
 
         $items = array_map(
             fn (Program $program) => ProgramOutput::fromEntity($program),
             iterator_to_array($result['items'])
         );
 
-        return $this->json([
+        return $this->ok([
             'items' => $items,
             'total' => $result['total'],
             'page' => $result['page'],
